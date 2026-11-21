@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lab {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String
+  website     String?
+  models      Model[]
+}
+
+model Provider {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  slug        String          @unique
+  description String
+  website     String?
+  offerings   ModelOffering[]
+}
+
+model Model {
+  id            String            @id @default(cuid())
+  name          String
+  slug          String            @unique
+  labId         String
+  lab           Lab               @relation(fields: [labId], references: [id])
+  summary       String
+  description   String
+  type          String
+  releaseDate   DateTime
+  contextWindow Int
+  maxOutput     Int?
+  modalities    String[]
+  capabilities  String[]
+  status        String            @default("Active")
+  offerings     ModelOffering[]
+  results       BenchmarkResult[]
+
+  @@index([labId])
+  @@index([type, releaseDate])
+  @@index([contextWindow])
+}
+
+model ModelOffering {
+  id                   String   @id @default(cuid())
+  modelId              String
+  providerId           String
+  model                Model    @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  provider             Provider @relation(fields: [providerId], references: [id])
+  inputPricePerMillion Decimal? @db.Decimal(12, 4)
+  outputPricePerMillion Decimal? @db.Decimal(12, 4)
+  currency             String   @default("USD")
+  checkedAt            DateTime
+  sourceNote           String
+
+  @@unique([modelId, providerId])
+  @@index([providerId])
+  @@index([inputPricePerMillion])
+}
+
+model Benchmark {
+  id           String            @id @default(cuid())
+  name         String            @unique
+  slug         String            @unique
+  category     String
+  unit         String            @default("score")
+  higherBetter Boolean           @default(true)
+  description  String
+  results      BenchmarkResult[]
+}
+
+model BenchmarkResult {
+  id          String    @id @default(cuid())
+  modelId     String
+  benchmarkId String
+  model       Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  benchmark   Benchmark @relation(fields: [benchmarkId], references: [id])
+  score       Decimal   @db.Decimal(8, 2)
+  asOf        DateTime
+  sourceNote  String
+
+  @@unique([modelId, benchmarkId])
+  @@index([benchmarkId, score])
+}

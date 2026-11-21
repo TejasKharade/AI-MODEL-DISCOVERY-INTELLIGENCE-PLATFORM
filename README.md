@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OneAtlas MVP
 
-## Getting Started
+A full stack AI model discovery and intelligence platform built for the AI Software Engineer internship assignment. Visitors can browse, search, filter, compare, and rank models, then explore the labs and providers behind them.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Next.js App Router, React, TypeScript, Tailwind CSS
+- Node.js API route handlers
+- PostgreSQL and Prisma ORM
+
+This is a single Next.js application. React pages call the read-only `/api/*` endpoints, which validate requests and query PostgreSQL through Prisma. Model data is never hardcoded into the UI.
+
+## Features
+
+- **Discovery:** search models; filter by lab, provider, type, and capability; sort by release date, context window, input price, or name; paginate results.
+- **Model details:** specifications, input/output pricing by provider, modalities, capabilities, release date, and benchmark results.
+- **Comparison:** select two or three models from the catalog and view their details side by side.
+- **Rankings:** filter by benchmark category and benchmark to compare scores.
+- **Directories:** browse labs and providers, then see each one's models.
+- **Responsive UI:** desktop and mobile layouts, global search, and loading/empty/error states.
+
+## Run locally
+
+Requirements: Node.js 24+, Docker Desktop, and npm. From this directory:
+
+```powershell
+npm install
+docker run --name oneatlas-postgres -e POSTGRES_PASSWORD=oneatlas_dev -e POSTGRES_DB=oneatlas -p 5432:5432 -d postgres:16-alpine
+Copy-Item .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Edit `.env` to use this local connection string:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+DATABASE_URL="postgresql://postgres:oneatlas_dev@localhost:5432/oneatlas?schema=public"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Then apply the schema, seed the demo catalog, and start the app:
 
-## Learn More
+```powershell
+npm run db:migrate
+npm run db:seed
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open http://localhost:3000/models. On subsequent starts, launch Docker Desktop and run `docker start oneatlas-postgres` if the container is stopped, then `npm run dev`. If port 3000 is occupied, run `npm run dev -- -p 3001` and open http://localhost:3001/models.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Seeding replaces the catalog contents.** Run it for initial setup or when you intentionally want to reset the demo data.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data model
 
-## Deploy on Vercel
+| Table | Purpose |
+| --- | --- |
+| `Lab` | The organization that develops a model. |
+| `Provider` | A platform that offers model access. |
+| `Model` | Name, type, release date, context, capabilities, and modalities. |
+| `ModelOffering` | Provider-specific input/output pricing and availability. |
+| `Benchmark` | A named evaluation and category. |
+| `BenchmarkResult` | A model's score for one benchmark. |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The seed script creates 18 models, 7 labs, 5 providers, and 3 demonstration benchmarks. Prices, provider availability, specifications, and benchmark scores in this catalog are **illustrative assignment data**, not live quotes or official evaluations. The UI labels this clearly. Real data ingestion would require source verification and ongoing updates.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Main routes
+
+| Page | API |
+| --- | --- |
+| `/models` | `/api/models`, `/api/filters` |
+| `/models/[slug]` | `/api/models/[slug]` |
+| `/compare?ids=slug1,slug2` | `/api/compare?ids=slug1,slug2` |
+| `/rankings` | `/api/rankings` |
+| `/labs`, `/labs/[slug]` | `/api/labs`, `/api/labs/[slug]` |
+| `/providers`, `/providers/[slug]` | `/api/providers`, `/api/providers/[slug]` |
+
+## Checks
+
+```powershell
+npm run lint
+npm run typecheck
+npm run build
+```
+
+The main catalog, detail, comparison, ranking, and directory endpoints have been smoke-tested against local PostgreSQL. Desktop and mobile layouts have been visually reviewed in a browser.
+
+## Deployment
+
+The assignment asks for a working public URL. Provision PostgreSQL on Neon or Railway and deploy the Next.js app on Vercel or Railway. Set `DATABASE_URL` in the deployment environment, apply the committed Prisma migration (`npx prisma migrate deploy`), and run `npm run db:seed` once against the hosted database. Verify the public pages and APIs before submission.
+
+Keep `.env` out of Git. The tracked `.env.example` is only a placeholder.
+
+## Assignment submission
+
+Submit a live URL, GitHub repository URL, and a 5–10 minute Loom video through the Google Form in the assignment. In the video, show discovery, filters, model detail, comparison, rankings, directories, the database/API architecture, technical decisions, and challenges. Be able to explain the code and why the data is illustrative.
